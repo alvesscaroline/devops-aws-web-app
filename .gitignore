@@ -1,0 +1,7 @@
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.pem
+*.key
+*.log
+.terraform.lock.hcl
