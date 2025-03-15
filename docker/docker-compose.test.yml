@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-test
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html
+    ports:
+      - "80:80"
+
+  tests:
+    image: python:3.11-alpine
+    container_name: docker-tests
+    working_dir: /app
+    volumes:
+      - ../tests:/app/tests 
+      - ../requirements.txt:/app/requirements.txt
+    command: sh -c "pip install -r /app/requirements.txt && pytest /app/tests/"
