@@ -10,66 +10,65 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository 
         uses: actions/checkout@v3
 
-      - name: Build Docker image for tests
-        run: docker build -t my-web-app-test -f docker/Dockerfile.test ./docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Run tests
-        run: docker run --rm my-web-app-test
+      - name: Run tests with Docker Compose
+        run: |
+          docker compose -f docker/docker-compose.test.yml up --build --abort-on-container-exit
+        env:
+          COMPOSE_INTERACTIVE_NO_CLI: 1
 
   deploy:
     name: Deploy Application
     runs-on: ubuntu-latest
-    needs: test
+    needs: test 
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Configure AWS Credentials
-      id: aws-config
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+      - name: Configure AWS Credentials
+        id: aws-config
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Authenticate to AWS ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Authenticate to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build Docker Image
-      run: |
-        echo "Building Docker image..."
-        docker build -t my-web-app -f docker/Dockerfile ./docker
-        docker tag my-web-app:latest ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
-        echo "Docker image built successfully."
+      - name: Build and Push Docker Image to AWS ECR
+        run: |
+          echo "Building Docker image..."
+          docker build -t my-web-app -f docker/Dockerfile ./docker
+          docker tag my-web-app:latest ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
+          echo "Docker image pushed successfully."
 
-    - name: Push Docker Image to AWS ECR
-      run: |
-        echo "Pushing Docker image to AWS ECR..."
-        docker push ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
-        echo "Docker image pushed successfully."
-
-    - name: Deploy to AWS EC2 via SSH
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.SSH_KEY }}
-        script: |
-          echo "Updating application on EC2..."
-          sudo docker pull ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
-          sudo docker stop my-web-app || true
-          sudo docker rm my-web-app || true
-          if sudo docker run -d -p 80:80 --name my-web-app ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest; then
-            echo "Application successfully deployed."
-          else
-            echo "Deployment failed, starting rollback..."
+      - name: Deploy to AWS EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "Updating application on EC2..."
+            sudo docker pull ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
             sudo docker stop my-web-app || true
             sudo docker rm my-web-app || true
-            sudo docker run -d --name my-web-app -p 80:80 ${{ steps.login-ecr.outputs.registry }}/my-web-app:previous
-            exit 1
-          fi
+            sudo docker run -d -p 80:80 --name my-web-app ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
+            echo "Application successfully deployed."
+            exit 0
+              } || {
+                echo "Deployment failed, starting rollback..."
+                sudo docker stop my-web-app || true
+                sudo docker rm my-web-app || true
+                sudo docker run -d --name my-web-app -p 80:80 ${{ steps.login-ecr.outputs.registry }}/my-web-app:previous
+                exit 1
+              }
