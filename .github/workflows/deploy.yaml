@@ -19,11 +19,12 @@ jobs:
       - name: Run tests
         run: |
           echo "Executing tests..."
-          docker run --rm my-web-app-test pytest test_app.py || exit 1
+          docker run --rm my-web-app-test pytest /tests/ || exit 1
 
   deploy:
     name: Deploy Application
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
     - name: Checkout repository
@@ -65,13 +66,12 @@ jobs:
           sudo docker pull ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
           sudo docker stop my-web-app || true
           sudo docker rm my-web-app || true
-          sudo docker run -d -p 80:80 --name my-web-app ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
-          echo "Application successfully deployed."
-          exit 0
-            } || {
-              echo "❌ Deployment failed, starting rollback..."
-              sudo docker stop my-web-app || true
-              sudo docker rm my-web-app || true
-              sudo docker run -d --name my-web-app -p 80:80 ${{ steps.login-ecr.outputs.registry }}/my-web-app:previous
-              exit 1
-            }
+          if sudo docker run -d -p 80:80 --name my-web-app ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest; then
+            echo "Application successfully deployed."
+          else
+            echo "Deployment failed, starting rollback..."
+            sudo docker stop my-web-app || true
+            sudo docker rm my-web-app || true
+            sudo docker run -d --name my-web-app -p 80:80 ${{ steps.login-ecr.outputs.registry }}/my-web-app:previous
+            exit 1
+          fi
