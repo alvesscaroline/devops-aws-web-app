@@ -6,6 +6,21 @@ on:
       - main
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout 
+        uses: actions/checkout@v3
+
+      - name: Build Docker image for tests
+        run: docker build -t my-web-app-test -f docker/Dockerfile ./docker
+
+      - name: Run tests
+        run: |
+          echo "Executing tests..."
+          docker run --rm my-web-app-test pytest test_app.py || exit 1
+
   deploy:
     name: Deploy Application
     runs-on: ubuntu-latest
@@ -52,3 +67,11 @@ jobs:
           sudo docker rm my-web-app || true
           sudo docker run -d -p 80:80 --name my-web-app ${{ steps.login-ecr.outputs.registry }}/my-web-app:latest
           echo "Application successfully deployed."
+          exit 0
+            } || {
+              echo "❌ Deployment failed, starting rollback..."
+              sudo docker stop my-web-app || true
+              sudo docker rm my-web-app || true
+              sudo docker run -d --name my-web-app -p 80:80 ${{ steps.login-ecr.outputs.registry }}/my-web-app:previous
+              exit 1
+            }
