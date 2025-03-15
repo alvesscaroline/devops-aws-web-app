@@ -1,10 +1,5 @@
-FROM python:3.11-alpine
+FROM nginx:alpine
 
-WORKDIR /app
+COPY index.html /usr/share/nginx/html/
 
-COPY docker/tests /tests
-COPY docker/requirements.txt /app/
-
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-CMD ["pytest", "/tests"]
+EXPOSE 80
