@@ -1,0 +1,9 @@
+FROM python:3.11-alpine
+
+WORKDIR /app
+
+COPY tests /app/tests
+
+RUN pip install --no-cache-dir pytest requests
+
+CMD ["pytest", "/app/tests"]
