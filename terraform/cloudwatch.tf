@@ -1,21 +1,53 @@
-resource "aws_cloudwatch_log_group" "nginx" {
-  name              = "/nginx/access.log"
+resource "aws_cloudwatch_log_group" "nginx_logs" {
+  name              = "nginx-access-logs"
   retention_in_days = 30
 }
 
-resource "aws_cloudwatch_log_stream" "nginx" {
-  name           = "nginx-access-stream"
-  log_group_name = aws_cloudwatch_log_group.nginx.name
+resource "aws_iam_role" "cloudwatch_role" {
+  name = "cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
 }
 
-resource "aws_s3_bucket" "nginx_logs" {
-  bucket = "nginx-access-logs-storage-${random_id.suffix.hex}"
-  force_destroy = true
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "s3_export" {
-  name            = "nginx-log-export"
-  log_group_name  = aws_cloudwatch_log_group.nginx.name
-  filter_pattern  = ""
-  destination_arn = aws_s3_bucket.nginx_logs.arn
+resource "aws_ssm_parameter" "cwagent_config" {
+  name  = "/AmazonCloudWatch-agent/config"
+  type  = "String"
+  value = jsonencode({
+    "agent": {
+      "metrics_collection_interval": 60,
+      "run_as_user": "cwagent"
+    },
+    "metrics": {
+      "aggregation_dimensions": [["InstanceId"]],
+      "append_dimensions": {
+        "AutoScalingGroupName": "AutoScalingGroupName",
+        "InstanceId": "InstanceId",
+        "InstanceType": "InstanceType"
+      },
+      "metrics_collected": {
+        "disk": {
+          "measurement": ["used_percent"],
+          "metrics_collection_interval": 60,
+          "resources": ["*"]
+        },
+        "mem": {
+          "measurement": ["mem_used_percent"],
+          "metrics_collection_interval": 60
+        },
+        "cpu": {
+          "measurement": ["cpu_usage_active"],
+          "metrics_collection_interval": 60
+        }
+      }
+    }
+  })
 }

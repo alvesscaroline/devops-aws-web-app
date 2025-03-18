@@ -1,14 +1,17 @@
 terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-  }
+  required_version = ">= 1.2.8"
 }
 
 provider "aws" {
   region = var.aws_region
+}
+
+module "security_group" {
+  source = "./security-group.tf"
+}
+
+module "ec2" {
+  source = "./ec2.tf"
 }
 
 module "s3" {
@@ -19,6 +22,6 @@ module "cloudwatch" {
   source = "./cloudwatch.tf"
 }
 
-module "ec2" {
-  source = "./ec2.tf"
+module "outputs" {
+  source = "./outputs.tf"
 }
