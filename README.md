@@ -159,6 +159,7 @@ If needed, restart the CloudWatch Agent inside the EC2 instance:
 ```bash
 sudo systemctl restart amazon-cloudwatch-agent
 ```
+<img width="1429" alt="Captura de Tela 2025-03-19 às 16 54 56" src="https://github.com/user-attachments/assets/82aca8a8-40c6-4b8f-91c5-b2512f26e539" />
 
 ## **Deploying Manually**
 If needed, the deployment can be done manually:
