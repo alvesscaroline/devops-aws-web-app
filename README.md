@@ -3,19 +3,21 @@
 ## **Overview**
 This project demonstrates a fully automated **CI/CD pipeline** to deploy a static website using **AWS services, Terraform, Docker, and GitHub Actions**. The pipeline includes **automated testing, containerization, and deployment to an EC2 instance**, ensuring a streamlined and efficient DevOps workflow.
 
-The primary objectives of this project are:
-- Automate the deployment process using **GitHub Actions**.
+### **Project Goals**
+- Automate deployment using **GitHub Actions**.
 - Containerize the application with **Docker** and push images to **AWS ECR**.
-- Deploy the application to an **AWS EC2 instance** using **Terraform** for infrastructure as code.
+- Deploy the application to **AWS EC2** using **Terraform**.
 - Run **automated tests** before deployment.
-- Implement a **rollback mechanism** in case of a failed deployment.
+- Implement **monitoring and observability** with **AWS CloudWatch**.
+- Enable **automatic rollback** in case of a failed deployment.
 
 ## **Technologies Used**
 - **Infrastructure as Code:** Terraform
 - **Containerization & Orchestration:** Docker, Docker Compose
-- **Cloud Provider:** AWS (EC2, ECR, IAM)
+- **Cloud Provider:** AWS (EC2, ECR, IAM, CloudWatch, SSM)
 - **CI/CD Automation:** GitHub Actions
 - **Configuration Management:** SSH, AWS CLI
+- **Monitoring & Observability:** CloudWatch Logs, CloudWatch Metrics, CloudWatch Agent
 - **Testing Framework:** Pytest
 - **Web Server:** Nginx
 - **Version Control:** Git & GitHub
@@ -40,11 +42,13 @@ The primary objectives of this project are:
 
 
 ## **Infrastructure Setup (AWS)**
-This project uses **Terraform** to provision AWS infrastructure, including:
-- **EC2 Instance** (t2.micro) for hosting the application.
+The AWS infrastructure is provisioned using **Terraform** and includes:
+- **EC2 Instance (t2.micro)** for hosting the application.
 - **Security Groups** to allow HTTP (80) and SSH (22) traffic.
-- **IAM Role & Policies** to grant permissions for ECR.
+- **IAM Role & Policies** for ECR and CloudWatch permissions.
 - **Key Pair** for secure SSH authentication.
+- **CloudWatch Log Group** for storing application logs.
+- **CloudWatch Agent** for collecting system metrics.
 
 ### **Deploying Infrastructure with Terraform**
 1. **Initialize Terraform:**
@@ -106,6 +110,47 @@ The deployment process is fully automated using **GitHub Actions**, ensuring eac
 ### **Workflow Configuration (deploy.yml)**
 The pipeline is defined in `.github/workflows/deploy.yml` and runs on every push to `main`.
 
+## **Monitoring & Observability**
+This project uses Amazon CloudWatch for log management and system metrics monitoring.
+
+### **CloudWatch Logs**
+- Nginx access logs are sent to CloudWatch Log Group: nginx-access-logs.
+- The CloudWatch Agent is installed on the EC2 instance to stream logs.
+
+To check logs in AWS Console:
+1. Navigate to CloudWatch → Logs.
+2. Locate the Log Group: nginx-access-logs.
+3. Click on the log stream associated with the EC2 instance.
+
+To check logs via CLI:
+
+```bash
+aws logs tail nginx-access-logs --follow --region us-east-1
+   ```
+
+### **CloudWatch Metrics**
+The CloudWatch Agent collects and publishes metrics for:
+- CPU Utilization
+- Memory Usage
+- Disk Space
+- Metrics are sent to the CWAagent namespace in CloudWatch.
+
+To view metrics:
+1. Go to CloudWatch → Metrics.
+2. Search for CWAgent.
+3. Select InstanceId dimension to visualize metrics for the EC2 instance.
+
+To fetch metrics via CLI:
+
+```bash
+aws cloudwatch list-metrics --namespace CWAgent --region us-east-1
+   ```
+### **Restart CloudWatch Agent**
+If needed, restart the CloudWatch Agent inside the EC2 instance:
+
+```bash
+sudo systemctl restart amazon-cloudwatch-agent
+```
 
 ## **Deploying Manually**
 If needed, the deployment can be done manually:
@@ -131,7 +176,6 @@ ssh -i key-ec2.pem ubuntu@<EC2_PUBLIC_IP> << EOF
     sudo docker run -d -p 80:80 --name my-web-app <AWS_ECR_URL>/my-web-app:latest
 EOF
 ```
-
 
 ## **Handling Rollback**
 If the new deployment fails, a **rollback** is triggered automatically. However, it can also be done manually:

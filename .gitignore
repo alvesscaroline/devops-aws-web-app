@@ -5,3 +5,4 @@ terraform.tfstate.backup
 *.key
 *.log
 .terraform.lock.hcl
+iam-policy.json
