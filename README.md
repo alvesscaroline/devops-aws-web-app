@@ -27,19 +27,27 @@ This project demonstrates a fully automated **CI/CD pipeline** to deploy a stati
 .
 ├── .github/workflows/deploy.yml   # GitHub Actions workflow for CI/CD
 ├── terraform/                     # Terraform configurations
-│   ├── main.tf                     # Infrastructure as code definition
+│   ├── provider.tf                 # AWS provider configuration
 │   ├── variables.tf                 # Terraform variables
 │   ├── outputs.tf                   # Terraform outputs
+│   ├── security-group.tf            # Security groups configuration
+│   ├── ec2.tf                        # EC2 instance and SSH key pair
+│   ├── s3.tf                         # S3 bucket configuration
+│   ├── cloudwatch.tf                 # CloudWatch logs and metrics configuration
+│   ├── iam.tf                        # IAM roles and policies
+│   ├── user-data.sh                  # EC2 user data script
 ├── docker/                          # Docker configurations
 │   ├── Dockerfile                    # Production Dockerfile
 │   ├── docker-compose.test.yml       # Docker Compose file for testing
 │   ├── index.html                    # Static HTML file served by Nginx
 ├── tests/                            # Automated tests
 │   ├── test_app.py                   # Test script to verify Nginx is running
+├── scripts/                          # Automation scripts
+│   ├── generate-iam-policy.sh        # Script to generate IAM policy dynamically
+├── .gitignore                        # Ignored files configuration
 ├── requirements.txt                  # Dependencies for testing
 ├── README.md                         # Project documentation
 ```
-
 
 ## **Infrastructure Setup (AWS)**
 The AWS infrastructure is provisioned using **Terraform** and includes:
