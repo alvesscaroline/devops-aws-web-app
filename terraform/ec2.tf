@@ -6,7 +6,7 @@ resource "tls_private_key" "ec2_key" {
 
 resource "local_file" "private_key" {
   content  = tls_private_key.ec2_key.private_key_pem
-  filename = "${path.module}/key-ec2.pem"
+  filename = "${path.module}/key-ec2-devops.pem"
 }
 
 resource "aws_key_pair" "ec2_key" {
